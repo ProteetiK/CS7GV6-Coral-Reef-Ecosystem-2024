@@ -1,0 +1,31 @@
+#version 330
+
+in vec3 vertex_position_pinkFish;
+in vec3 vertex_normal_pinkFish;
+
+
+out vec3 LightIntensity;
+
+vec4 LightPosition = vec4 (0.0, 10.0, 0.0, 1.0);
+vec3 Kd = vec3 (0.8, 0.2, 0.5);
+vec3 Ld = vec3 (1.0, 1.0, 1.0);
+
+
+uniform mat4 pinkFish_view;
+uniform mat4 pinkFish_proj;
+uniform mat4 pinkFish_model;
+
+void main(){
+
+	mat4 pinkFish_ModelViewMatrix = pinkFish_view * pinkFish_model;
+  mat3 pinkFish_NormalMatrix =  mat3(pinkFish_ModelViewMatrix);
+  vec3 tnorm = normalize( pinkFish_NormalMatrix * vertex_normal_pinkFish);
+  vec4 eyeCoords = pinkFish_ModelViewMatrix * vec4(vertex_position_pinkFish,1.0);
+  vec3 s = normalize(vec3(LightPosition - eyeCoords));
+  LightIntensity = Ld * Kd * max( dot( s, tnorm ), 0.0 );
+  
+  gl_Position = pinkFish_proj * pinkFish_view * pinkFish_model * vec4(vertex_position_pinkFish,1.0);
+}
+
+
+  

@@ -1,0 +1,37 @@
+#version 330
+
+in vec3 vertex_position_base;
+in vec3 vertex_normal_base;
+
+in vec3 vertex_position_fish;
+in vec3 vertex_normal_fish;
+
+
+out vec3 LightIntensity;
+
+vec4 LightPosition = vec4 (0.0, 10.0, 0.0, 1.0);
+vec3 Kd = vec3 (0.75, 0.69, 0.5);
+vec3 Ld = vec3 (1.0, 1.0, 1.0);
+
+
+uniform mat4 base_view;
+uniform mat4 base_proj;
+uniform mat4 base_model;
+
+uniform mat4 fish_view;
+uniform mat4 fish_proj;
+uniform mat4 fish_model;
+
+void main(){
+  mat4 base_ModelViewMatrix = base_view * base_view;
+  mat3 base_NormalMatrix =  mat3(base_ModelViewMatrix);
+  vec3 tnorm = normalize( base_NormalMatrix * vertex_normal_base);
+  vec4 eyeCoords = base_ModelViewMatrix * vec4(vertex_position_base,1.0);
+  vec3 s = normalize(vec3(LightPosition - eyeCoords));
+  LightIntensity = Ld * Kd * max( dot( s, tnorm ), 0.0 );
+  
+  gl_Position = base_proj * base_view * base_model * vec4(vertex_position_base,1.0);
+}
+
+
+  
