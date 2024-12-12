@@ -21,6 +21,7 @@
 #include "Globals.h"
 #include <GLFW/glfw3.h>
 
+#pragma region definitions
 //screen dimensions
 int width = 800;
 int height = 600;
@@ -42,43 +43,10 @@ float rotateY = 0;
 int mouseX = 0;
 int mouseY = 0;
 
-void createUnderWaterScene() {
-	//display procedural terrain
-	displayTerrain();
-	//display swaying 3D green plant
-	displayPlant();
-	//display 3D model of reef supplication
-	displayBase();
-	//display school of 3D yellow fish
-	displayFish();
-	//display school of 3D pink fish
-	displayPinkFish();
-	//display static 3D red plant
-	displayRedPlant();
-	//display animated water texture
-	glDisable(GL_DEPTH_TEST);
-	displayWaterTexture();
-}
+bool toggleTopView = true;
+#pragma endregion
 
-void display() {
-	//main display method
-	//enable depth and blend modes
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDepthFunc(GL_LESS);
-	//set sand colour to background
-	glClearColor(0.9f, 0.8f, 0.6f, 0.8f);
-	//clear entire screen
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//build actual scene
-	createUnderWaterScene();
-	//enable depth mask
-	glDepthMask(GL_TRUE);
-	//swap buffers
-	glutSwapBuffers();
-}
-
+#pragma region animation_and_keyboard_input
 void updateScene() {
 	//update scene
 	static DWORD last_time = 0;
@@ -92,7 +60,6 @@ void updateScene() {
 	move_fish_y -= delta;
 	//define main fsine-wave for fish motion
 	move_fish_y = sin(move_fish_y*10+delta) + cos(3* move_fish_y* move_fish_y+delta);
-	//move_fish_y = sin(move_fish_y * 10 + delta) * 1.26f;
 	move_fish_x -= 2.0f * delta;
 	//limit the variance due to sine curve
 	move_fish_x = fmodf(move_fish_x, 50);
@@ -156,6 +123,67 @@ void specialKeypress(int key, int x, int y) {
 		break;
 	}
 }
+void handleKeyboard(unsigned char key, int x, int y) {
+	switch (key) {
+	case ' ':
+		toggleTopView = !toggleTopView;
+		break;
+	}
+}
+#pragma endregion
+
+#pragma region main_scene_render
+
+void createUnderWaterScene() {
+	//display procedural terrain
+	displayTerrain();
+	//display swaying 3D green plant
+	displayPlant();
+	//display 3D model of reef supplication
+	displayBase();
+	//display school of 3D yellow fish
+	displayFish();
+	//display school of 3D pink fish
+	displayPinkFish();
+	//display static 3D red plant
+	displayRedPlant();
+	//display animated water texture
+	glDisable(GL_DEPTH_TEST);
+	displayWaterTexture();
+}
+
+void renderText(const char* message, float x, float y) {
+	glRasterPos2f(x, y); // Set position in normalized coordinates (-1 to 1)
+	for (const char* c = message; *c != '\0'; c++) {
+		glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c); // Render each character
+	}
+}
+
+void display() {
+	//main display method
+	//enable depth and blend modes
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glDepthFunc(GL_LESS);
+	//set sand colour to background
+	glClearColor(0.9f, 0.8f, 0.6f, 0.8f);
+	//clear entire screen
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//display custom message prompt to switch camera view
+	if (toggleTopView)
+		renderText("Press SPACE to continue!", 0.0f, -0.9f);
+	else
+		renderText("Press SPACE to return.", 0.0f, -0.9f);
+	//build actual scene
+	createUnderWaterScene();
+	//enable depth mask
+	glDepthMask(GL_TRUE);
+	//swap buffers
+	glutSwapBuffers();
+}
+
+#pragma endregion
 
 int main(int argc, char** argv) {
 	//initialize the instance
@@ -166,9 +194,11 @@ int main(int argc, char** argv) {
 	glutCreateWindow("Coral Reef Ecosystem");
 	//trigger loop of drawing and refreshing scene with motion components
 	glutDisplayFunc(display);
+	//keep the scene running
 	glutIdleFunc(updateScene);
 	//process keyboard/mouse/trackpad inputs
 	glutSpecialFunc(specialKeypress);
+	glutKeyboardFunc(handleKeyboard);
 	glutMotionFunc(mouseMotion);
 	glutPassiveMotionFunc(mousePassive);
 	//handle scene building error
@@ -177,7 +207,6 @@ int main(int argc, char** argv) {
 		fprintf(stderr, "Error: '%s'\n", glewGetErrorString(res));
 		return 1;
 	}
-	glfwSwapInterval(1);
 	//run infinite loop to display scene
 	glutMainLoop();
 	return 0;
