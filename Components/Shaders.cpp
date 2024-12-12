@@ -10,87 +10,109 @@
 
 using namespace std;
 
-	char* readShaderSource(const char* shaderFile) {
-		FILE* fp;
-		fopen_s(&fp, shaderFile, "rb");
+//read contents of shader files
+char* readShaderSource(const char* shaderFile) {
+    FILE* fp;
+    fopen_s(&fp, shaderFile, "rb");
+    
+    //handle error
+    if (fp == NULL) { return NULL; }
 
-		if (fp == NULL) { return NULL; }
+    fseek(fp, 0L, SEEK_END);
+    long size = ftell(fp);
 
-		fseek(fp, 0L, SEEK_END);
-		long size = ftell(fp);
+    fseek(fp, 0L, SEEK_SET);
+    char* buf = new char[size + 1];
+    fread(buf, 1, size, fp);
+    //add null value at the end of the file
+    buf[size] = '\0';
 
-		fseek(fp, 0L, SEEK_SET);
-		char* buf = new char[size + 1];
-		fread(buf, 1, size, fp);
-		buf[size] = '\0';
+    fclose(fp);
+    return buf;
+}
 
-		fclose(fp);
+//add the contents of the shader file to a shader program
+static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType) {
+    //create shader object
+    GLuint ShaderObj = glCreateShader(ShaderType);
 
-		return buf;
-	}
+    //handle error
+    if (ShaderObj == 0) {
+        cerr << "Error creating shader..." << endl;
+        cerr << "Press enter/return to exit..." << endl;
+        cin.get();
+        exit(1);
+    }
+    //read shader code from file
+    const char* pShaderSource = readShaderSource(pShaderText);
 
-	static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType)
-	{
-		GLuint ShaderObj = glCreateShader(ShaderType);
+    //set source code, compile the shader and check for success
+    glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderSource, NULL);
+    glCompileShader(ShaderObj);
+    GLint success;
+    glGetShaderiv(ShaderObj, GL_COMPILE_STATUS, &success);
 
-		if (ShaderObj == 0) {
-			std::cerr << "Error creating shader..." << std::endl;
-			std::cerr << "Press enter/return to exit..." << std::endl;
-			std::cin.get();
-			exit(1);
-		}
-		const char* pShaderSource = readShaderSource(pShaderText);
+    //handle error
+    if (!success) {
+        GLchar InfoLog[1024] = { '\0' };
+        glGetShaderInfoLog(ShaderObj, 1024, NULL, InfoLog);
+        cerr << "Error compiling " << (ShaderType == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader program: " << InfoLog << endl;
+        cerr << "Press enter/return to exit..." << endl;
+        cin.get();
+        exit(1);
+    }
+    //attach shader to shader program
+    glAttachShader(ShaderProgram, ShaderObj);
+}
 
-		glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderSource, NULL);
-		glCompileShader(ShaderObj);
-		GLint success;
-		glGetShaderiv(ShaderObj, GL_COMPILE_STATUS, &success);
-		if (!success) {
-			GLchar InfoLog[1024] = { '\0' };
-			glGetShaderInfoLog(ShaderObj, 1024, NULL, InfoLog);
-			std::cerr << "Error compiling "
-				<< (ShaderType == GL_VERTEX_SHADER ? "vertex" : "fragment")
-				<< " shader program: " << InfoLog << std::endl;
-			std::cerr << "Press enter/return to exit..." << std::endl;
-			std::cin.get();
-			exit(1);
-		}
-		glAttachShader(ShaderProgram, ShaderObj);
-	}
+//link vertex and fragment shaders to the shader program
+GLuint CompileShader(const char* vertexShader, const char* fragmentShader) {
+    
+    //create shader program
+    GLuint ShaderProgramID = glCreateProgram();
+    
+    //handle error
+    if (ShaderProgramID == 0) {
+        cerr << "Error creating shader program..." << endl;
+        cerr << "Press enter/return to exit..." << endl;
+        cin.get();
+        exit(1);
+    }
 
-	GLuint CompileShader(const char* vertexShader, const char* fragmentShader) {
-		GLuint ShaderProgramID = glCreateProgram();
-		if (ShaderProgramID == 0) {
-			std::cerr << "Error creating shader program..." << std::endl;
-			std::cerr << "Press enter/return to exit..." << std::endl;
-			std::cin.get();
-			exit(1);
-		}
+    //add vertex shader to shader program
+    AddShader(ShaderProgramID, vertexShader, GL_VERTEX_SHADER); // Add the vertex shader to the program
+    //add fragment shader to shader program
+    AddShader(ShaderProgramID, fragmentShader, GL_FRAGMENT_SHADER);
 
-		AddShader(ShaderProgramID, vertexShader, GL_VERTEX_SHADER);
-		AddShader(ShaderProgramID, fragmentShader, GL_FRAGMENT_SHADER);
+    //link the shader program and check for success
+    GLint Success = 0;
+    GLchar ErrorLog[1024] = { '\0' };
+    glLinkProgram(ShaderProgramID);
+    glGetProgramiv(ShaderProgramID, GL_LINK_STATUS, &Success);
 
-		GLint Success = 0;
-		GLchar ErrorLog[1024] = { '\0' };
-		glLinkProgram(ShaderProgramID);
-		glGetProgramiv(ShaderProgramID, GL_LINK_STATUS, &Success);
-		if (Success == 0) {
-			glGetProgramInfoLog(ShaderProgramID, sizeof(ErrorLog), NULL, ErrorLog);
-			std::cerr << "Error linking shader program: " << ErrorLog << std::endl;
-			std::cerr << "Press enter/return tom exit..." << std::endl;
-			std::cin.get();
-			exit(1);
-		}
+    //handle error
+    if (Success == 0) { // If linking failed
+        glGetProgramInfoLog(ShaderProgramID, sizeof(ErrorLog), NULL, ErrorLog);
+        cerr << "Error linking shader program: " << ErrorLog << endl;
+        cerr << "Press enter/return to exit..." << endl;
+        cin.get();
+        exit(1);
+    }
 
-		glValidateProgram(ShaderProgramID);
-		glGetProgramiv(ShaderProgramID, GL_VALIDATE_STATUS, &Success);
-		if (!Success) {
-			glGetProgramInfoLog(ShaderProgramID, sizeof(ErrorLog), NULL, ErrorLog);
-			std::cerr << "Invalid shader program: " << ErrorLog << std::endl;
-			std::cerr << "Press enter/return to exit..." << std::endl;
-			std::cin.get();
-			exit(1);
-		}
-		glUseProgram(ShaderProgramID);
-		return ShaderProgramID;
-	}
+    //validate shader program
+    glValidateProgram(ShaderProgramID);
+    glGetProgramiv(ShaderProgramID, GL_VALIDATE_STATUS, &Success);
+    
+    //handle error
+    if (!Success) { 
+        glGetProgramInfoLog(ShaderProgramID, sizeof(ErrorLog), NULL, ErrorLog);
+        cerr << "Invalid shader program: " << ErrorLog << endl;
+        cerr << "Press enter/return to exit..." << endl;
+        cin.get();
+        exit(1);
+    }
+
+    //set shader program to use and return the program Id
+    glUseProgram(ShaderProgramID);
+    return ShaderProgramID;
+}
