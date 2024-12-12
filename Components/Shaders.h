@@ -1,7 +1,10 @@
 #include <GL/glew.h>
     
-    char* readShaderSource(const char* shaderFile);
+//read contents of shader files
+char* readShaderSource(const char* shaderFile);
 
-    static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType);
+//add the contents of the shader file to a shader program
+static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum ShaderType);
 
-    GLuint CompileShader(const char* vertexShader, const char* fragmentShader);
+//link vertex and fragment shaders to the shader program
+GLuint CompileShader(const char* vertexShader, const char* fragmentShader);
